@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 import Image from 'next/image'
 import Link from 'next/link'
@@ -103,7 +103,7 @@ const DeletedText = ({ className, ...props }: DeletedTextProps) => (
 
 const HorizontalRule = ({ className, ...props }: HorizontalRuleProps) => (
   <hr
-    className={cn(className, 'mx-auto w-48 border-b border-border')}
+    className={cn(className, 'border-border mx-auto w-48 border-b')}
     {...filterProps(props)}
   />
 )
@@ -150,25 +150,44 @@ const Heading6 = ({ className, ...props }: HeadingProps) => (
 
 const Img = ({ src, alt }: ImgProps) => {
   const [error, setError] = useState(false)
+  const [objectUrl, setObjectUrl] = useState<string | null>(null)
 
-  if (!src) return null
+  // Convert Blob to object URL if needed
+  if (src instanceof Blob && !objectUrl) {
+    const url = URL.createObjectURL(src)
+    setObjectUrl(url)
+  }
+
+  // Clean up object URL on unmount
+  useEffect(() => {
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl)
+      }
+    }
+  }, [objectUrl])
+
+  // Determine the correct src to use
+  const imageSrc = typeof src === 'string' ? src : objectUrl
+
+  if (!imageSrc) return null
 
   return (
     <div className="w-full max-w-xl">
       {error ? (
-        <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-md bg-secondary/50 text-muted">
+        <div className="bg-secondary/50 text-muted flex h-40 flex-col items-center justify-center gap-2 rounded-md">
           <Paragraph className="text-primary">Image unavailable</Paragraph>
           <Link
-            href={src}
+            href={typeof src === 'string' ? src : ''}
             target="_blank"
             className="max-w-md truncate underline"
           >
-            {src}
+            {typeof src === 'string' ? src : ''}
           </Link>
         </div>
       ) : (
         <Image
-          src={src}
+          src={imageSrc}
           width={96}
           height={56}
           alt={alt ?? 'Rendered image'}
